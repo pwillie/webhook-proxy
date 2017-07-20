@@ -32,6 +32,8 @@ func main() {
 
 	r := mux.NewRouter()
 
+	r.HandleFunc("/status", healthcheck_handler)
+
 	for _, uuid := range c.Uuid {
 		hook := bitbucket.New(&bitbucket.Config{UUID: uuid})
 		hook.RegisterEvents(HandleMultiple, bitbucket.RepoPushEvent) // Add as many as you want
@@ -51,6 +53,11 @@ func main() {
 
 	log.Printf("Listening on addr: %v path: %v", ":"+strconv.Itoa(c.Port), c.Path)
 	log.Fatal(srv.ListenAndServe())
+}
+
+// status handler for kubernetes health checks
+func healthcheck_handler(res http.ResponseWriter, req *http.Request) {
+	res.WriteHeader(http.StatusOK)
 }
 
 // HandleMultiple handles multiple GitHub events
