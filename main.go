@@ -1,17 +1,21 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 	"github.com/gorilla/mux"
 	"github.com/kelseyhightower/envconfig"
 	"gopkg.in/go-playground/webhooks.v3"
 	"gopkg.in/go-playground/webhooks.v3/bitbucket"
-	"bytes"
-	"encoding/json"
-	"io/ioutil"
 )
 
 type Configuration struct {
@@ -50,6 +54,19 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+
+	sigs := make(chan os.Signal, 1)
+
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		sig := <-sigs
+		log.Println()
+		log.Printf("Received signal: %v", sig)
+		log.Println("Shutting down...")
+		ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+		srv.Shutdown(ctx)
+	}()
 
 	log.Printf("Listening on addr: %v path: %v", ":"+strconv.Itoa(c.Port), c.Path)
 	log.Fatal(srv.ListenAndServe())
